@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  router:
+    build: ./router
+    ports:
+      - "5140:5140/udp"
+      - "5141:5141"
+    volumes:
+      - router_logs:/logs
+    depends_on:
+      - syslog1
+      - syslog2
+
+  syslog1:
+    build: ./syslog1
+
+  syslog2:
+    build: ./syslog2
+
+volumes:
+  router_logs:
