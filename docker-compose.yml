@@ -1,16 +1,19 @@
-version: "3.9"
+version: "3.8"
 
 services:
+
   router:
     build: ./router
     ports:
       - "5140:5140/udp"
-      - "5141:5141"
+      - "5141:5141/tcp"
     volumes:
       - router_logs:/logs
     depends_on:
-      - syslog1
-      - syslog2
+      syslog1:
+        condition: service_started
+      syslog2:
+        condition: service_started
 
   syslog1:
     build: ./syslog1
@@ -18,5 +21,35 @@ services:
   syslog2:
     build: ./syslog2
 
+  loki:
+    image: grafana/loki:2.9.0
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-stack/loki-config.yml:/etc/loki/loki-config.yml
+      - loki_data:/loki  # Needed for compactor module
+      - loki_wal:/wal
+      - loki_compactor:/tmp/loki/boltdb-shipper-compactor
+
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - ./loki-stack/promtail-config.yml:/etc/promtail/config.yml
+      - router_logs:/logs
+    command: -config.file=/etc/promtail/config.yml
+
+  grafana:
+    image: grafana/grafana:10.0.3
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./loki-stack/grafana-provisioning:/etc/grafana/provisioning
+    depends_on:
+      - loki
+
 volumes:
   router_logs:
+  loki_data:
+  loki_wal:
+  loki_compactor:
